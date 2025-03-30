@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Token Purchase App</title>
+  <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
+  <script src="https://unpkg.com/@solana/spl-token@latest/lib/index.iife.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 1.5rem; max-width: 600px; margin: auto; }
+    textarea, button { width: 100%; padding: 1rem; margin-top: 1rem; border-radius: 8px; border: 1px solid #ccc; }
+    button { background-color: #4CAF50; color: white; font-weight: bold; border: none; }
+    .status { margin-top: 1rem; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <h2>Buy with SPL Token</h2>
+  <div id="wallet-section">
+    <button onclick="connectWallet()">Connect Phantom Wallet</button>
+  </div>
+  <div id="order-section" style="display:none">
+    <p id="wallet-address"></p>
+    <textarea id="order-text" placeholder="What do you want to buy?"></textarea>
+    <button onclick="sendTokens()">Pay 1,000,000 Tokens</button>
+    <p class="status" id="status"></p>
+  </div>
+
+  <script>
+    const { Connection, PublicKey, clusterApiUrl, Transaction } = solanaWeb3;
+    const { getAssociatedTokenAddress, getAccount, createTransferInstruction, TOKEN_PROGRAM_ID } = splToken;
+
+    const TOKEN_MINT = new PublicKey('mntCseuEzYkWfkedoY24SoNny2jcEQUrsw23AQN3Z3Y');
+    const BUSINESS_WALLET = new PublicKey('ERURqtigSATAUvqE1mj7PuvPjMn64cLyRGn5uwSxpxwU');
+    const AMOUNT = 1000000;
+    const connection = new Connection(clusterApiUrl('mainnet-beta'), 'confirmed');
+    let wallet = null;
+
+    emailjs.init("wmi0MgfdA1Egn8vWa"); // Replace with your actual EmailJS user ID if different
+
+    async function connectWallet() {
+      if (window.solana?.isPhantom) {
+        const res = await window.solana.connect();
+        wallet = res.publicKey;
+        document.getElementById('wallet-section').style.display = 'none';
+        document.getElementById('order-section').style.display = 'block';
+        document.getElementById('wallet-address').innerText = 'Connected: ' + wallet.toBase58();
+      } else {
+        alert('Please install Phantom Wallet');
+      }
+    }
+
+    async function sendTokens() {
+      const statusEl = document.getElementById('status');
+      const orderText = document.getElementById('order-text').value;
+      statusEl.innerText = 'Sending tokens...';
+
+      try {
+        const sender = wallet;
+        const senderAta = await getAssociatedTokenAddress(TOKEN_MINT, sender);
+        const recipientAta = await getAssociatedTokenAddress(TOKEN_MINT, BUSINESS_WALLET);
+
+        const senderAccount = await getAccount(connection, senderAta);
+        if (Number(senderAccount.amount) < AMOUNT) {
+          statusEl.innerText = 'Not enough tokens';
+          return;
+        }
+
+        const ix = createTransferInstruction(senderAta, recipientAta, sender, AMOUNT, [], TOKEN_PROGRAM_ID);
+        const tx = new Transaction().add(ix);
+        tx.feePayer = sender;
+        const blockhash = await connection.getLatestBlockhash();
+        tx.recentBlockhash = blockhash.blockhash;
+
+        const signed = await window.solana.signTransaction(tx);
+        const txid = await connection.sendRawTransaction(signed.serialize());
+        await connection.confirmTransaction(txid);
+
+        statusEl.innerText = 'Order placed! Transaction: ' + txid;
+
+        // Send email with order details
+        emailjs.send("service_fpnrrj3", "template_0o1it2p", {
+          order_text: orderText,
+          wallet_address: wallet.toBase58(),
+          transaction_id: txid
+        }).then(() => {
+          console.log('Email sent');
+        }).catch((err) => {
+          console.error('Email error:', err);
+        });
+
+      } catch (err) {
+        console.error(err);
+        statusEl.innerText = 'Transaction failed';
+      }
+    }
+  </script>
+</body>
+</html>
