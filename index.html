@@ -2,110 +2,87 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Token Purchase App</title>
-  <script src="https://unpkg.com/@solana/web3.js@1.76.0/lib/index.iife.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Essence Corner Order</title>
   <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
   <style>
-    body { font-family: sans-serif; padding: 1.5rem; max-width: 600px; margin: auto; }
-    textarea, button { width: 100%; padding: 1rem; margin-top: 1rem; border-radius: 8px; border: 1px solid #ccc; }
-    button { background-color: #4CAF50; color: white; font-weight: bold; border: none; }
-    .status { margin-top: 1rem; font-size: 0.9rem; }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f7f7f7;
+      padding: 40px;
+    }
+    .container {
+      max-width: 500px;
+      margin: auto;
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    textarea, input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      width: 100%;
+      font-size: 16px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .message {
+      text-align: center;
+      margin-top: 15px;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
-  <h2>Buy with SPL Token</h2>
-  <div id="wallet-section">
-    <button onclick="connectWallet()">Connect Phantom Wallet</button>
-  </div>
-  <div id="order-section" style="display:none">
-    <p id="wallet-address"></p>
-    <textarea id="order-text" placeholder="What do you want to buy?"></textarea>
-    <button onclick="sendTokens()">Pay 1,000,000 Tokens</button>
-    <p class="status" id="status"></p>
+  <div class="container">
+    <h2>Essence Corner Order Form</h2>
+    <form id="order-form">
+      <label for="order">Your Order:</label>
+      <textarea id="order" name="order_text" rows="5" placeholder="Type your order here..." required></textarea>
+
+      <label for="email">Your Email (optional):</label>
+      <input type="email" id="email" name="user_email" placeholder="you@example.com"/>
+
+      <button type="submit">Place Order</button>
+    </form>
+    <div class="message" id="message"></div>
   </div>
 
   <script>
-    const splTokenScript = document.createElement('script');
-    splTokenScript.src = "https://cdn.jsdelivr.net/npm/@solana/spl-token@0.3.5/lib/index.iife.min.js";
-    splTokenScript.onload = () => {
-      const { Connection, PublicKey, clusterApiUrl, Transaction } = solanaWeb3;
-      const { getAssociatedTokenAddress, getAccount, createTransferInstruction, TOKEN_PROGRAM_ID } = window.splToken;
+    (function(){
+      emailjs.init("_28hCUaSHmbxSAkxL");
+    })();
 
-      const TOKEN_MINT = new PublicKey('mntCseuEzYkWfkedoY24SoNny2jcEQUrsw23AQN3Z3Y');
-      const BUSINESS_WALLET = new PublicKey('ERURqtigSATAUvqE1mj7PuvPjMn64cLyRGn5uwSxpxwU');
-      const AMOUNT = 1000000;
-      const connection = new Connection(clusterApiUrl('mainnet-beta'), 'confirmed');
-      let wallet = null;
+    document.getElementById('order-form').addEventListener('submit', function(e) {
+      e.preventDefault();
 
-      emailjs.init("wmi0MgfdA1Egn8vWa");
-
-      window.connectWallet = async function () {
-        try {
-          if (window.solana?.isPhantom) {
-            const res = await window.solana.connect();
-            wallet = res.publicKey;
-
-            console.log("Wallet connected:", wallet.toBase58());
-            alert("Connected to Phantom: " + wallet.toBase58());
-
-            document.getElementById('wallet-section').style.display = 'none';
-            document.getElementById('order-section').style.display = 'block';
-            document.getElementById('wallet-address').innerText = 'Connected: ' + wallet.toBase58();
-          } else {
-            alert('Please install Phantom Wallet and open in supported browser.');
-          }
-        } catch (error) {
-          console.error("Connection error:", error);
-          alert("Wallet connection failed: " + error.message);
-        }
-      };
-
-      window.sendTokens = async function () {
-        const statusEl = document.getElementById('status');
-        const orderText = document.getElementById('order-text').value;
-        statusEl.innerText = 'Sending tokens...';
-
-        try {
-          const sender = wallet;
-          const senderAta = await getAssociatedTokenAddress(TOKEN_MINT, sender);
-          const recipientAta = await getAssociatedTokenAddress(TOKEN_MINT, BUSINESS_WALLET);
-
-          const senderAccount = await getAccount(connection, senderAta);
-          if (Number(senderAccount.amount) < AMOUNT) {
-            statusEl.innerText = 'Not enough tokens';
-            return;
-          }
-
-          const ix = createTransferInstruction(senderAta, recipientAta, sender, AMOUNT, [], TOKEN_PROGRAM_ID);
-          const tx = new Transaction().add(ix);
-          tx.feePayer = sender;
-          const blockhash = await connection.getLatestBlockhash();
-          tx.recentBlockhash = blockhash.blockhash;
-
-          const signed = await window.solana.signTransaction(tx);
-          const txid = await connection.sendRawTransaction(signed.serialize());
-          await connection.confirmTransaction(txid);
-
-          statusEl.innerText = 'Order placed! Transaction: ' + txid;
-
-          emailjs.send("service_fpnrrj3", "template_0o1it2p", {
-            order_text: orderText,
-            wallet_address: wallet.toBase58(),
-            transaction_id: txid
-          }).then(() => {
-            console.log('Email sent');
-          }).catch((err) => {
-            console.error('Email error:', err);
-          });
-
-        } catch (err) {
-          console.error(err);
-          statusEl.innerText = 'Transaction failed';
-        }
-      };
-    };
-    document.head.appendChild(splTokenScript);
+      emailjs.sendForm('service_fpnrrj3', 'template_woff3s9', this)
+        .then(function(response) {
+          document.getElementById('message').innerText = "✅ Order sent successfully!";
+          document.getElementById('order-form').reset();
+        }, function(error) {
+          document.getElementById('message').innerText = "❌ Failed to send order. Please try again.";
+          console.error("EmailJS Error:", error);
+        });
+    });
   </script>
 </body>
 </html>
