@@ -39,14 +39,23 @@
     emailjs.init("wmi0MgfdA1Egn8vWa"); // Replace with your actual EmailJS user ID if different
 
     async function connectWallet() {
-      if (window.solana?.isPhantom) {
-        const res = await window.solana.connect();
-        wallet = res.publicKey;
-        document.getElementById('wallet-section').style.display = 'none';
-        document.getElementById('order-section').style.display = 'block';
-        document.getElementById('wallet-address').innerText = 'Connected: ' + wallet.toBase58();
-      } else {
-        alert('Please install Phantom Wallet');
+      try {
+        if (window.solana?.isPhantom) {
+          const res = await window.solana.connect();
+          wallet = res.publicKey;
+
+          console.log("Wallet connected:", wallet.toBase58());
+          alert("Connected to Phantom: " + wallet.toBase58());
+
+          document.getElementById('wallet-section').style.display = 'none';
+          document.getElementById('order-section').style.display = 'block';
+          document.getElementById('wallet-address').innerText = 'Connected: ' + wallet.toBase58();
+        } else {
+          alert('Please install Phantom Wallet and open in supported browser.');
+        }
+      } catch (error) {
+        console.error("Connection error:", error);
+        alert("Wallet connection failed. Please try again.");
       }
     }
 
