@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Token Purchase App</title>
-  <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
-  <script src="https://unpkg.com/@solana/spl-token@latest/lib/index.iife.min.js"></script>
+  <script src="https://unpkg.com/@solana/web3.js@1.76.0/lib/index.iife.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@solana/spl-token@0.3.5/lib/index.iife.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
   <style>
     body { font-family: sans-serif; padding: 1.5rem; max-width: 600px; margin: auto; }
@@ -28,13 +28,13 @@
 
   <script>
     const { Connection, PublicKey, clusterApiUrl, Transaction } = solanaWeb3;
-    const { getAssociatedTokenAddress, getAccount, createTransferInstruction, TOKEN_PROGRAM_ID } = window.splToken;
+    const { getAssociatedTokenAddress, getAccount, createTransferInstruction, TOKEN_PROGRAM_ID } = splToken;
 
     const TOKEN_MINT = new PublicKey('mntCseuEzYkWfkedoY24SoNny2jcEQUrsw23AQN3Z3Y');
     const BUSINESS_WALLET = new PublicKey('ERURqtigSATAUvqE1mj7PuvPjMn64cLyRGn5uwSxpxwU');
     const AMOUNT = 1000000;
     const connection = new Connection(clusterApiUrl('mainnet-beta'), 'confirmed');
-    let wallet;
+    let wallet = null;
 
     emailjs.init("wmi0MgfdA1Egn8vWa");
 
