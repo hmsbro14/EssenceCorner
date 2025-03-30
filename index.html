@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Token Purchase App</title>
   <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
-  <script src="https://unpkg.com/@solana/spl-token@latest/lib/index.iife.js"></script>
+  <script src="https://unpkg.com/@solana/spl-token@latest/lib/index.iife.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
   <style>
     body { font-family: sans-serif; padding: 1.5rem; max-width: 600px; margin: auto; }
@@ -28,15 +28,15 @@
 
   <script>
     const { Connection, PublicKey, clusterApiUrl, Transaction } = solanaWeb3;
-    const { getAssociatedTokenAddress, getAccount, createTransferInstruction, TOKEN_PROGRAM_ID } = splToken;
+    const { getAssociatedTokenAddress, getAccount, createTransferInstruction, TOKEN_PROGRAM_ID } = window.splToken;
 
     const TOKEN_MINT = new PublicKey('mntCseuEzYkWfkedoY24SoNny2jcEQUrsw23AQN3Z3Y');
     const BUSINESS_WALLET = new PublicKey('ERURqtigSATAUvqE1mj7PuvPjMn64cLyRGn5uwSxpxwU');
     const AMOUNT = 1000000;
     const connection = new Connection(clusterApiUrl('mainnet-beta'), 'confirmed');
-    let wallet = null;
+    let wallet;
 
-    emailjs.init("wmi0MgfdA1Egn8vWa"); // Replace with your actual EmailJS user ID if different
+    emailjs.init("wmi0MgfdA1Egn8vWa");
 
     async function connectWallet() {
       try {
@@ -55,7 +55,7 @@
         }
       } catch (error) {
         console.error("Connection error:", error);
-        alert("Wallet connection failed. Please try again.");
+        alert("Wallet connection failed: " + error.message);
       }
     }
 
@@ -87,7 +87,6 @@
 
         statusEl.innerText = 'Order placed! Transaction: ' + txid;
 
-        // Send email with order details
         emailjs.send("service_fpnrrj3", "template_0o1it2p", {
           order_text: orderText,
           wallet_address: wallet.toBase58(),
